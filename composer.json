@@ -19,7 +19,7 @@
   "autoload": {
     "psr-0": {
       "Order": "src"
-    }
+    },
     "psr-4": {
       "Flycartinc\\Order\\": "src/"
     }
