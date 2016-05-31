@@ -1,16 +1,12 @@
 <?php
-namespace FlycartInc\Order\Models;
+namespace FlycartInc\Order\Model;
 
-use Exception;
+class OrderMeta extends BaseModel {
 
-class PostMeta extends Model {
-
-
-	protected $table = 'storepress_order_meta';
-	protected $primaryKey = 'meta_id';
+	protected $table = 'storepress_ordermeta';
+	protected $primaryKey = 'id';
 	public $timestamps = false;
 	protected $fillable = [ 'meta_key', 'meta_value', 'order_id' ];
-
 
 
 	/**
@@ -22,10 +18,10 @@ class PostMeta extends Model {
 		if ($ref) {
 			$this->primaryKey = 'meta_value';
 
-			return $this->hasOne('Flycartinc\Order\Models\Order', 'order_id');
+			return $this->hasOne('Flycartinc\Order\Model\Order', 'id');
 		}
 
-		return $this->belongsTo('Flycartinc\Order\Models\Order');
+		return $this->belongsTo('Flycartinc\Order\Model\Order', 'order_id', 'id');
 	}
 
 

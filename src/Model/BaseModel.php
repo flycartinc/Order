@@ -11,10 +11,9 @@
 
 namespace FlycartInc\Order\Model;
 
-use Corcel\Post;
+use Corcel\Model as CorcelModel;
 
-class Model extends Post {
-
+class BaseModel extends  CorcelModel{
 
 
 }
