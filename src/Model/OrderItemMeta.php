@@ -2,9 +2,6 @@
 
 namespace Flycartinc\Order\Model;
 
-use FlycartInc\Order\Model\BaseModel;
-
-
 /**
  * Class order_items
  * @package StorePress\Models
@@ -33,6 +30,7 @@ class OrderItemMeta extends BaseModel
      */
     protected $primaryKey = 'meta_id';
 
+    protected $itemMeta = array();
 
     /**
      * Order relationship
@@ -48,5 +46,7 @@ class OrderItemMeta extends BaseModel
 
         return $this->belongsTo('Flycartinc\Order\Model\OrderItem', 'order_item_id', 'meta_id');
     }
+
+
 
 }

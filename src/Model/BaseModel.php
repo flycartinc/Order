@@ -12,8 +12,17 @@
 namespace FlycartInc\Order\Model;
 
 use Corcel\Model as CorcelModel;
+use Corcel\Post;
 
-class BaseModel extends  CorcelModel{
+class BaseModel extends CorcelModel
+{
 
+    public function getMetaOf($post_type, $meta_key)
+    {
+        $post = Post::where('post_type', $post_type)->get()->first();
+        if (empty($post)) return array();
+        $meta = $post->meta()->get()->where('meta_key', $meta_key)->pluck('meta_value', 'meta_key')->first();
+        return (!empty($meta)) ? $meta : null;
+    }
 
 }
