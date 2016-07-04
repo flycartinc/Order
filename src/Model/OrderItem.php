@@ -104,9 +104,9 @@ class OrderItem extends BaseModel implements OrderItemInterface
     /**
      * @param $itemMeta
      */
-    public function setItem($itemMeta)
+    public function setItem($item)
     {
-        $this->item = (object)$itemMeta;
+        $this->item = (object) $item;
     }
 
     /**
@@ -130,12 +130,12 @@ class OrderItem extends BaseModel implements OrderItemInterface
      */
     public function getQuantity()
     {
-        return (int)$this->item->buy;
+        return (int)$this->orderitem_quantity;
     }
 
     public function setQuantity($quantity)
     {
-        $this->item->buy = $quantity;
+        $this->orderitem_quantity = $quantity;
     }
 
     /**
@@ -169,15 +169,7 @@ class OrderItem extends BaseModel implements OrderItemInterface
     public function getBasePrice()
     {
         $option_price = $this->getOptionPrice();
-        $id = $this->getOrderItemID();
-        $qty = $this->item->buy;
-        // If ID of the product is not Set then return price as 0
-        if (!$id) return 0;
-
-        // Getting Special Price by its Qty
-        $base_price = $this->getSpecialPrice();
-
-        return $base_price + $option_price;
+        return $this->base_price + $option_price;
     }
 
     /**
@@ -197,7 +189,8 @@ class OrderItem extends BaseModel implements OrderItemInterface
     }
 
     public function getTaxProfile(){
-        return $this->item->taxProfile;
+
+        return $this->taxprofile_id;
     }
 
     /**
@@ -206,6 +199,12 @@ class OrderItem extends BaseModel implements OrderItemInterface
     public function getLineItemPrice()
     {
         return $this->getBasePrice() * $this->getQuantity();
+    }
+
+    public function prepareItem($cartitem) {
+
+
+
     }
 
 }
