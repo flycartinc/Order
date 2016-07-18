@@ -803,6 +803,8 @@ class Order extends BaseModel
 
 
     public function calculateShipping() {
+
+
         $shipping = new Shipping();
         if ( $this->needs_shipping() && $this->show_shipping() ) {
             $shipping->calculateShipping( $this->get_shipping_packages() );
