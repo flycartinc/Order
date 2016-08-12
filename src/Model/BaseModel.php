@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Order management package for StorePress
  *
@@ -8,7 +7,6 @@
  * that was distribute as a part of the source code
  *
  */
-
 namespace FlycartInc\Order\Model;
 
 use Corcel\Model as CorcelModel;
