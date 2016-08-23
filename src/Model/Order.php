@@ -55,6 +55,10 @@ class Order extends BaseModel
     public $timestamps = true;
     /** @var array Contains an array of cart items. */
     public $cart_contents = array();
+    /**
+     * @var int
+     */
+    public $cart_item_quantitu = 0;
     /** @var float Cart grand total. */
     public $total;
     /** @var float Cart subtotal. */
@@ -152,10 +156,19 @@ class Order extends BaseModel
      */
     protected $taxmodel;
 
+    /**
+     * @var
+     */
     protected $order_id;
 
+    /**
+     * @var
+     */
     private $transaction_id;
 
+    /**
+     * @var
+     */
     private $transaction_data;
 
     /**
@@ -195,7 +208,7 @@ class Order extends BaseModel
      */
     public function items()
     {
-        return $this->hasMany('Flycartinc\Order\Model\OrderItem', 'order_id', 'id');
+        return $this->hasMany('Flycartinc\Order\Model\OrderItem', 'order_id', 'unique_order_id');
     }
 
     /**
@@ -203,7 +216,7 @@ class Order extends BaseModel
      */
     public function meta()
     {
-        return $this->hasMany('Flycartinc\Order\Model\OrderMeta', 'order_id');
+        return $this->hasMany('Flycartinc\Order\Model\OrderMeta', 'order_id', 'unique_order_id');
     }
 
     /**
@@ -214,6 +227,9 @@ class Order extends BaseModel
         $this->order_id = $order_id;
     }
 
+    /**
+     * @param bool $status
+     */
     public function paymentComplete($status = false)
     {
         if ($status == false) {
@@ -223,6 +239,9 @@ class Order extends BaseModel
         $this->updateOrderStatus($status);
     }
 
+    /**
+     * @param $status
+     */
     public function updateOrderStatus($status)
     {
         //TODO: Improve this Process
@@ -240,6 +259,9 @@ class Order extends BaseModel
         $this->saveTransaction();
     }
 
+    /**
+     * @return bool
+     */
     public function saveTransaction()
     {
         if (empty($this->transaction_id)) return false;
@@ -640,6 +662,7 @@ class Order extends BaseModel
             do_action('storepress_calculate_totals', $this);
             // Grand Total - Discounted product prices, discounted tax, shipping cost + tax
             $this->total = max(0, apply_filters('storepress_calculated_total', round($this->cart_contents_total + $this->tax_total + $this->shipping_tax_total + $this->shipping_total + $this->fee_total, $this->dp), $this));
+            $this->total = $this->total + $this->tax_total;
         } else {
             // Set tax total to sum of all tax rows
             $this->tax_total = $taxModel->getTaxTotal($this->taxes);
