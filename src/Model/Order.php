@@ -71,6 +71,8 @@ class Order extends BaseModel
     public $taxes = array();
     /** @var array An array of taxes/tax rates for the shipping. */
     public $shipping_taxes = array();
+    /** @var array Holding the Shipping Info. */
+    public $shipping_info = array();
     /** @var float Discount amount before tax */
     public $discount_cart;
     /** @var float Discounted tax amount. Used predominantly for displaying tax inclusive prices correctly */
@@ -79,6 +81,8 @@ class Order extends BaseModel
     public $fee_total;
     /** @var float Shipping cost. */
     public $shipping_total;
+    /** @var bool Represents the Cart Status */
+    public $cart_status = true;
     /** @var float Shipping tax. */
     public $shipping_tax_total;
     /** @var array cart_session_data. Array of data the cart calculates and stores in the session with defaults */
@@ -282,19 +286,21 @@ class Order extends BaseModel
     }
 
     /**
-     * @param $settings
-     * @param $taxmodel
      * @return $this
      */
-    public function initOrder($settings, $taxmodel)
+    public function initOrder()
     {
-        //first get the items from cart and set them
-        //TODO:: add the getter once cart refactoring has been finished.
-        //initialise the variables
-        $this->params = $settings;
-        $this->taxmodel = $taxmodel;
-        $cartitems = array();
+        $this->calculateTotals();
         return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function vertifyStock()
+    {
+        //TODO: Improve this
+        return true;
     }
 
     /**
@@ -432,13 +438,13 @@ class Order extends BaseModel
          * Calculate subtotals for items. This is done first so that discount logic can use the values.
          */
         foreach ($cartitems as $cart_item_key => $cartitem) {
+
             if (!$cartitem instanceof Collection) {
                 $cartitem = collect($cartitem);
             }
 //            $product = $cartitem->get('product');
-            $product = $productModel->setProductId($cartitem['product_id']);
-            $price_obj = $product->getPrice($cartitem->get('quantity', 1));
-
+            $product = $cartitem['product'];
+            $price_obj = $product->meta['pricing'];
             if ((!is_null($price_obj->special_price) or isset($price_obj->special_price)) and $price_obj->special_price != 0) {
                 $line_price = $price_obj->special_price;
             } else {
@@ -529,9 +535,8 @@ class Order extends BaseModel
          * Calculate totals for items.
          */
         foreach ($cartitems as $cart_item_key => $cartitem) {
-            $product = $this->getProductFromCartItem($cartitem);
-
-            $price_obj = $product->getPrice($cartitem->get('quantity', 1));
+            $product = $cartitem['product'];
+            $price_obj = $product->meta['pricing'];
 
             if ((!is_null($price_obj->special_price) or isset($price_obj->special_price)) and $price_obj->special_price != 0) {
                 $line_price = $price_obj->special_price;
@@ -787,6 +792,14 @@ class Order extends BaseModel
     }
 
     /**
+     *
+     */
+    public function populateOrder()
+    {
+        //TODO: Implement DB interaction
+    }
+
+    /**
      * @return $this
      */
     public function getCartFromSession()
@@ -859,7 +872,7 @@ class Order extends BaseModel
         if ($first_item_subtotal === $second_item_subtotal) {
             return 0;
         }
-        return ($first_item_subtotal < $second_item_subtotal) ? 1 : -1;
+        return ($first_item_subtotal < $second_item_subtotal) ? 1 : - 1;
     }
 
     /**
@@ -964,9 +977,14 @@ class Order extends BaseModel
      */
     public function needs_shipping()
     {
-        if (Settings::get('enableShipping') === 'no') {
+        $this->shipping_info['isEnable'] = true;
+        if (Settings::get('shipping_enable') === 'no') {
+            $this->shipping_info['isEnable'] = false;
             return false;
         }
+
+        $this->shipping_info['shipping_dont_allow_if_no_shipping'] = Settings::get('shipping_dont_allow_if_no_shipping', 'off');
+
         $needs_shipping = false;
         if ($this->cart_contents) {
             foreach ($this->cart_contents as $cart_item_key => $cartitem) {
@@ -976,6 +994,8 @@ class Order extends BaseModel
                 }
             }
         }
+        $this->shipping_info['needShipping'] = $needs_shipping;
+
         return apply_filters('storepress_cart_needs_shipping', $needs_shipping);
     }
 
@@ -1000,9 +1020,9 @@ class Order extends BaseModel
      */
     public function show_shipping()
     {
-        if (Settings::get('enableShipping') == 'off' || empty($this->cart_contents)) return false;
+        if (Settings::get('shipping_enable') == 'off' || empty($this->cart_contents)) return false;
 
-        if ('yes' === Settings::get('cartconfig_shippingCostRequiresAddress')) {
+        if ('yes' === Settings::get('cartconfig_is_shipping_address_required')) {
             $customer = new Customer();
             if (!$customer->has_calculated_shipping()) {
                 if (!$customer->get_shipping_country() && !$customer->get_shipping_state() && !$customer->get_shipping_postcode()) {

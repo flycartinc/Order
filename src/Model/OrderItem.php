@@ -152,7 +152,7 @@ class OrderItem extends BaseModel implements OrderItemInterface
     public function getUnitPrice()
     {
         dd($this->meta);
-        return $this->item->regularPrice;
+        return $this->item->regular_price;
     }
 
     /**
@@ -160,7 +160,7 @@ class OrderItem extends BaseModel implements OrderItemInterface
      */
     public function setUnitPrice($unitPrice)
     {
-        $this->item->regularPrice = $unitPrice;
+        $this->item->regular_price = $unitPrice;
     }
 
     /**
