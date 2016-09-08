@@ -854,9 +854,9 @@ class Order extends BaseModel
      */
     public function getProductFromCartItem(Collection $cartitem)
     {
-        $product = Product::find($cartitem->get('product_id'));
+        $product = Product::init($cartitem->get('product_id'));
         if (isset($product->ID) && $product->ID) return $product;
-        return new Product();
+        return Product::getInstance();
     }
 
     /**
