@@ -59,6 +59,11 @@ class Order extends BaseModel
     public $timestamps = true;
     /** @var array Contains an array of cart items. */
     public $cart_contents = array();
+
+    /**
+     * @var array
+     */
+    public $order_items = array();
     /**
      * @var int
      */
@@ -296,21 +301,16 @@ class Order extends BaseModel
      */
     public function initOrder()
     {
-        $this->calculateTotals();
-        return $this;
-    }
-
-    public function getProducts()
-    {
-        if (empty($this->cart_contents)) return array();
-
-        foreach ($this->cart_contents as &$item) {
+        $order_items = $this->getCart();
+        
+        foreach ($order_items as $index => &$item) {
             $item['line_price'] = $this->getLineItemPrice($item['product']);
-            $item['line_total'] = $item['line_price'] * $item['quantity'];
-            $item['product']->processProduct();
+            $item['product']->processProduct(false);
             $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
         }
-        return $this->cart_contents;
+
+        /** To Verify the Cart status. */
+        $this->validateCart();
     }
 
     /**
