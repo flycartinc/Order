@@ -198,7 +198,7 @@ class Order extends BaseModel
         parent::__construct($attributes);
 
         $this->prices_include_tax = Settings::pricesIncludeTax();
-        $this->tax_display_cart = Settings::get('tax_display_cart');
+        $this->tax_display_cart = Settings::get('tax_display_price_during_cart');
     }
 
     /**
@@ -302,9 +302,10 @@ class Order extends BaseModel
     public function initOrder()
     {
         $order_items = $this->getCart();
-        
+
         foreach ($order_items as $index => &$item) {
             $item['line_price'] = $this->getLineItemPrice($item['product']);
+            $item['line_final_total'] = $this->getLineItemSubtotal($item['product'], $item['quantity']);
             $item['product']->processProduct(false);
             $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
         }
@@ -1057,7 +1058,7 @@ class Order extends BaseModel
      */
     public function getLineItemPrice(ProductInterface $product)
     {
-        if ($this->tax_display_cart == 'excl') {
+        if ($this->tax_display_cart == 'excludeTax') {
             $product_price = $product->get_price_excluding_tax();
         } else {
             $product_price = $product->get_price_including_tax();
@@ -1087,7 +1088,7 @@ class Order extends BaseModel
         // Taxable
         if ($product->isTaxable()) {
 
-            if ($this->tax_display_cart == 'excl') {
+            if ($this->tax_display_cart == 'excludeTax') {
 
                 $row_price = $product->get_price_excluding_tax($quantity);
                 $product_subtotal = $row_price;
@@ -1269,7 +1270,7 @@ class Order extends BaseModel
         } else {
 
             // Display varies depending on settings
-            if ($this->tax_display_cart == 'excl') {
+            if ($this->tax_display_cart == 'excludeTax') {
 
                 $cart_subtotal = (new Currency())->format($this->subtotal_ex_tax);
 
@@ -1301,7 +1302,7 @@ class Order extends BaseModel
             if ($this->shipping_total > 0) {
 
                 // Display varies depending on settings
-                if ($this->tax_display_cart == 'excl') {
+                if ($this->tax_display_cart == 'excludeTax') {
 
                     $return = $this->shipping_total;
 
