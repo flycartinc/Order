@@ -9,6 +9,8 @@
  */
 namespace Flycartinc\Order\Model;
 
+use CommerceGuys\Addressing\Model\Address;
+use CommerceGuys\Addressing\Repository\CountryRepository;
 use CommerceGuys\Tax\Model\TaxRateAmount;
 use Herbert\Framework\Notifier;
 use Illuminate\Support\Collection;
@@ -1149,6 +1151,7 @@ class Order extends BaseModel
         $taxes = $this->getTaxes();
 
         $tax_totals = array();
+        $currency = new Currency();
 
         foreach ($taxes as $key => $tax) {
             if (isset($tax['rate']) && $tax['rate'] instanceof TaxRateAmount) {
@@ -1160,7 +1163,7 @@ class Order extends BaseModel
                 $tax_totals[$tax_rate_id]->is_compound = $taxType->isCompound();
                 $tax_totals[$tax_rate_id]->label = $taxType->getName();
                 $tax_totals[$tax_rate_id]->amount += $tax['amount'];
-                $tax_totals[$tax_rate_id]->formatted_amount = $tax_totals[$tax_rate_id]->amount;
+                $tax_totals[$tax_rate_id]->formatted_amount = $currency->format($tax_totals[$tax_rate_id]->amount);
             }
         }
 
@@ -1197,7 +1200,7 @@ class Order extends BaseModel
         $single_rate->is_compound = $taxType->isCompound();
         $single_rate->label = $taxType->getName();
         $single_rate->amount += $tax['amount'];
-        $single_rate->formatted_amount = $single_rate->amount;
+        $single_rate->formatted_amount = (new Currency())->format($single_rate->amount);
         return $single_rate;
     }
 
@@ -1274,14 +1277,14 @@ class Order extends BaseModel
 
                 $cart_subtotal = (new Currency())->format($this->subtotal_ex_tax);
 
-                if ($this->tax_total > 0 && $this->prices_include_tax) {
+                if ($this->tax_total > 0 && !$this->prices_include_tax) {
                     $cart_subtotal .= ' <small class="tax_label">(ex. Tax)</small>';
                 }
 
             } else {
                 $cart_subtotal = (new Currency())->format($this->subtotal);
 
-                if ($this->tax_total > 0 && !$this->prices_include_tax) {
+                if ($this->tax_total > 0 && $this->prices_include_tax) {
                     $cart_subtotal .= ' <small class="tax_label">(incl. Tax)</small>';
                 }
             }
@@ -1331,6 +1334,37 @@ class Order extends BaseModel
 
         return '';
     }
+
+    public function getCartOrderTotal() {
+        $value = '<strong>' . (new Currency())->format($this->getTotal()) . '</strong> ';
+
+        // If prices are tax inclusive, show taxes here
+        if ( Settings::isTaxEnabled() && $this->tax_display_cart == 'includeTax' ) {
+            $tax_string_array = array();
+
+            if ( Settings::get( 'tax_display_tax_total' ) == 'itemized' ) {
+                foreach ( $this->getItemisedTaxTotals() as $code => $tax )
+                    $tax_string_array[] = sprintf( '%s %s', $tax->formatted_amount, $tax->label );
+            } else {
+                $tax_string_array[] = sprintf( '%s %s', $this->getTaxesTotal( true ) , Settings::taxOrVat() );
+            }
+
+            if ( ! empty( $tax_string_array ) ) {
+                $customer = new Customer();
+
+                $taxable_address = $customer->get_taxable_address();
+
+
+                $estimated_text  = $customer->is_customer_outside_base() && ! $customer->has_calculated_shipping()
+                    ? sprintf( ' ' . __( 'estimated for %s', 'storepress' ), $taxable_address[0] )
+                    : '';
+                $value .= '<small class="includes_tax">' . sprintf( __( '(includes %s)', 'storepress' ), implode( ', ', $tax_string_array ) . $estimated_text ) . '</small>';
+            }
+        }
+
+        return apply_filters( 'sp_cart_totals_order_total_html', $value );
+    }
+
 
 
 }
