@@ -62,6 +62,9 @@ class Order extends BaseModel
     /** @var array Contains an array of cart items. */
     public $cart_contents = array();
 
+    /** @var float The total cost of the cart items. */
+    public $cart_contents_total;
+
     /**
      * @var array
      */
@@ -582,7 +585,7 @@ class Order extends BaseModel
                 $line_subtotal_tax = 0;
                 $line_subtotal = $line_price;
                 $line_tax = 0;
-                $line_total = $taxModel->round($discounted_price * $cartitem->get('quantity'));
+                $line_total = $discounted_price * $cartitem->get('quantity');
                 /**
                  * Prices include tax.
                  */
@@ -600,7 +603,7 @@ class Order extends BaseModel
                     // Work out a new base price without the shop's base tax
                     $taxes = $taxModel->calculateTax($line_price, $base_tax_rates, true);
                     // Now we have a new item price (excluding TAX)
-                    $line_subtotal = round($line_price - $taxModel->getTaxTotal($taxes), $taxModel->precision());
+                    $line_subtotal = $line_price - $taxModel->getTaxTotal($taxes);
                     $taxes = $taxModel->calculateTax($line_subtotal, $item_tax_rates);
                     $line_subtotal_tax = $taxModel->getTaxTotal($taxes);
                     // Adjusted price (this is the price including the new tax rate)
@@ -691,7 +694,8 @@ class Order extends BaseModel
             do_action('storepress_calculate_totals', $this);
 
             // Grand Total - Discounted product prices, discounted tax, shipping cost + tax
-            $this->total = max(0, apply_filters('storepress_calculated_total', round($this->cart_contents_total + $this->tax_total + $this->shipping_tax_total + $this->shipping_total + $this->fee_total, $this->dp), $this));
+            $total = $this->cart_contents_total + $this->tax_total + $this->shipping_tax_total + $this->shipping_total + $this->fee_total;
+            $this->total = max(0, apply_filters('storepress_calculated_total', $total, $this));
 
         } else {
             // Set tax total to sum of all tax rows
