@@ -421,7 +421,7 @@ class Order extends BaseModel
         if ($this->isEmpty()) {
             $this->setSession();
         }
-        $productModel = new Product();
+
         $tax_rates = array();
         $shop_tax_rates = array();
         $taxModel = new Tax();
@@ -431,11 +431,8 @@ class Order extends BaseModel
          * Calculate subtotals for items. This is done first so that discount logic can use the values.
          */
         foreach ($cartitems as $cart_item_key => $cartitem) {
-            if (!$cartitem instanceof Collection) {
-                $cartitem = collect($cartitem);
-            }
-//            $product = $cartitem->get('product');
-            $product = $cartitem['product'];
+
+            $product = $cartitem->getProduct();
             $pricing = $product->getPrice();
             $line_price = $pricing->price;
             $line_price = $line_price * $cartitem->getQuantity();
