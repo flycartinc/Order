@@ -228,7 +228,7 @@ class Order extends BaseModel
      */
     public function items()
     {
-        return $this->hasMany('Flycartinc\Order\Model\OrderItem', 'order_id', 'unique_order_id');
+        return $this->hasMany('Flycartinc\Order\Model\OrderItem', 'order_id', 'id');
     }
 
     /**
@@ -236,7 +236,7 @@ class Order extends BaseModel
      */
     public function meta()
     {
-        return $this->hasMany('Flycartinc\Order\Model\OrderMeta', 'order_id', 'unique_order_id');
+        return $this->hasMany('Flycartinc\Order\Model\OrderMeta', 'order_id', 'id');
     }
 
     /**
@@ -311,7 +311,7 @@ class Order extends BaseModel
         foreach ($order_items as $index => &$item) {
             $item['line_price'] = $this->getLineItemPrice($item['product']);
             $item['line_final_total'] = $this->getLineItemSubtotal($item['product'], $item['quantity']);
-            $item['product']->processProduct(false);
+            // $item['product']->processProduct(false);
             $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
         }
 
@@ -589,7 +589,7 @@ class Order extends BaseModel
                 /**
                  * Prices include tax.
                  */
-            } elseif ($this->prices_include_tax) {
+            } elseif ($this->prices_include_tax && $product->isTaxable()) {
                 $base_tax_rates = $shop_tax_rates[$product->getTaxClass()];
                 $item_tax_rates = $tax_rates[$product->getTaxClass()];
                 /**
@@ -637,7 +637,7 @@ class Order extends BaseModel
                 /**
                  * Prices exclude tax.
                  */
-            } else {
+            } elseif($product->isTaxable()) {
                 $item_tax_rates = $tax_rates[$product->getTaxClass()];
                 // Work out a new base price without the shop's base tax
                 $taxes = $taxModel->calculateTax($line_price, $item_tax_rates);
@@ -1088,9 +1088,6 @@ class Order extends BaseModel
     public function getLineItemSubtotal(ProductInterface $product, $quantity)
     {
 
-        $pricing = $product->getPrice();
-        $price = $pricing->price;
-
         // Taxable
         if ($product->isTaxable()) {
 
@@ -1117,6 +1114,8 @@ class Order extends BaseModel
             // Non-taxable
         } else {
 
+            $pricing = $product->getPrice($quantity);
+            $price = $pricing->price;
             $row_price = $price * $quantity;
             $product_subtotal = $row_price;
         }
