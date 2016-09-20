@@ -207,23 +207,6 @@ class Order extends BaseModel
     }
 
     /**
-     * @param mixed $transaction_data
-     */
-    public function setTransactionData($transaction_data)
-    {
-        $this->transaction_data = $transaction_data;
-    }
-
-    /**
-     * @param mixed $transaction_id
-     */
-    public function setTransactionId($transaction_id)
-    {
-        $this->transaction_id = $transaction_id;
-    }
-
-
-    /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function items()
@@ -246,6 +229,23 @@ class Order extends BaseModel
     {
         $this->order_id = $order_id;
     }
+
+    /**
+     * @param mixed $transaction_data
+     */
+    public function setTransactionData($transaction_data)
+    {
+        $this->transaction_data = $transaction_data;
+    }
+
+    /**
+     * @param mixed $transaction_id
+     */
+    public function setTransactionId($transaction_id)
+    {
+        $this->transaction_id = $transaction_id;
+    }
+
 
     /**
      * @param bool $status
@@ -520,7 +520,7 @@ class Order extends BaseModel
                 /**
                  * ADJUST TAX - Calculations when base tax is not equal to the item tax.
                  *
-                 * The woocommerce_adjust_non_base_location_prices filter can stop base taxes being taken off when dealing with out of base locations.
+                 * The storepress_adjust_non_base_location_prices filter can stop base taxes being taken off when dealing with out of base locations.
                  * e.g. If a product costs 10 including tax, all users will pay 10 regardless of location and taxes.
                  * This feature is experimental @since 2.4.7 and may change in the future. Use at your risk.
                  */
@@ -767,30 +767,6 @@ class Order extends BaseModel
     }
 
     /**
-     * @param $config
-     */
-    public static function TaxProfiles(&$config)
-    {
-        $tax = new \Flycartinc\Order\Model\Tax();
-        //Get the Tax Profile Only for Store
-        $config['shop_tax'] = $tax->processTax($isStore = true);
-        //Get the Tax profile for Store and Customer
-        $config['item_tax'] = $tax->processTax();
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getTaxDetails()
-    {
-        $tax['subtotal'] = $this->subtotal;
-        $tax['tax'] = $this->total_tax;
-        $tax['total'] = $this->total_cost;
-        $tax['rates'] = $this->taxrates;
-        return $tax;
-    }
-
-    /**
      * @param $type
      * @return bool
      */
@@ -811,8 +787,8 @@ class Order extends BaseModel
         if (!did_action('sp_cart_loaded_from_session')) {
             $this->getCartFromSession();
         }
-        return $this->cart_contents;
-        // return array_filter((array)$this->cart_contents);
+        //   return $this->cart_contents;
+        return array_filter((array)$this->cart_contents);
     }
 
     /**
