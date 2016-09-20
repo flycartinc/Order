@@ -518,7 +518,7 @@ class Order extends BaseModel
          * Calculate totals for items.
          */
         foreach ($cartitems as $cart_item_key => $cartitem) {
-            $product = $cartitem['product'];
+            $product = $cartitem->getProduct();
             $pricing = $product->getPrice();
             $base_price = $pricing->price;
             $line_price = $pricing->price * $cartitem->getQuantity();
@@ -747,9 +747,7 @@ class Order extends BaseModel
          */
         $cart_items = Cart::getItems(true);
         foreach ($cart_items as $key => $cartitem) {
-            if (!$cartitem instanceof Collection) {
-                $cartitem = collect($cartitem);
-            }
+
             //let us find the product
             $product = $cartitem->getProduct();
             //does the product exists
