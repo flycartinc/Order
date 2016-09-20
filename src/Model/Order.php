@@ -9,6 +9,8 @@
  */
 namespace Flycartinc\Order\Model;
 
+use CommerceGuys\Addressing\Model\Address;
+use CommerceGuys\Addressing\Repository\CountryRepository;
 use CommerceGuys\Tax\Model\TaxRateAmount;
 use Herbert\Framework\Notifier;
 use Illuminate\Support\Collection;
@@ -59,7 +61,6 @@ class Order extends BaseModel
     public $timestamps = true;
     /** @var array Contains an array of cart items. */
     public $cart_contents = array();
-
     /**
      * @var array
      */
@@ -168,17 +169,14 @@ class Order extends BaseModel
      * @var
      */
     protected $taxmodel;
-
     /**
      * @var
      */
     protected $order_id;
-
     /**
      * @var
      */
     private $transaction_id;
-
     /**
      * @var
      */
@@ -196,9 +194,8 @@ class Order extends BaseModel
             }
         }
         parent::__construct($attributes);
-
         $this->prices_include_tax = Settings::pricesIncludeTax();
-        $this->tax_display_cart = Settings::get('tax_display_cart');
+        $this->tax_display_cart = Settings::get('tax_display_price_during_cart');
     }
 
     /**
@@ -217,13 +214,12 @@ class Order extends BaseModel
         $this->transaction_id = $transaction_id;
     }
 
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function items()
     {
-        return $this->hasMany('Flycartinc\Order\Model\OrderItem', 'order_id', 'unique_order_id');
+        return $this->hasMany('Flycartinc\Order\Model\OrderItem', 'order_id', 'id');
     }
 
     /**
@@ -231,7 +227,7 @@ class Order extends BaseModel
      */
     public function meta()
     {
-        return $this->hasMany('Flycartinc\Order\Model\OrderMeta', 'order_id', 'unique_order_id');
+        return $this->hasMany('Flycartinc\Order\Model\OrderMeta', 'order_id', 'id');
     }
 
     /**
@@ -250,7 +246,6 @@ class Order extends BaseModel
         if ($status == false) {
             $status = 'complete';
         }
-
         $this->updateOrderStatus($status);
     }
 
@@ -270,7 +265,6 @@ class Order extends BaseModel
         $orderMeta->meta_key = 'order_status';
         $orderMeta->meta_value = $status;
         $orderMeta->save();
-
         $this->saveTransaction();
     }
 
@@ -280,10 +274,8 @@ class Order extends BaseModel
     public function saveTransaction()
     {
         if (empty($this->transaction_id)) return false;
-
         $transaction_id = $this->transaction_id;
         $transaction_data = $this->transaction_data;
-
         $orderMeta = new OrderMeta();
         $orderMeta->order_id = $this->order_id;
         $orderMeta->meta_key = 'transaction_id';
@@ -302,13 +294,12 @@ class Order extends BaseModel
     public function initOrder()
     {
         $order_items = $this->getCart();
-        
         foreach ($order_items as $index => &$item) {
             $item['line_price'] = $this->getLineItemPrice($item['product']);
+            $item['line_final_total'] = $this->getLineItemSubtotal($item['product'], $item['quantity']);
             $item['product']->processProduct(false);
             $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
         }
-
         /** To Verify the Cart status. */
         $this->validateCart();
     }
@@ -448,27 +439,21 @@ class Order extends BaseModel
     {
         //this is where the real calculation takes place.
         $this->reset();
-
         //TODO: Verify this
 //        do_action('storepress_before_calculate_totals', $this);
-
         if ($this->isEmpty()) {
             $this->setSession();
         }
-
         $productModel = new Product();
         $tax_rates = array();
         $shop_tax_rates = array();
         $taxModel = new Tax();
         $cartitems = $this->getCart();
-
         if (empty($cartitems) or (!is_array($cartitems) and !is_object($cartitems))) return array();
-
         /**
          * Calculate subtotals for items. This is done first so that discount logic can use the values.
          */
         foreach ($cartitems as $cart_item_key => $cartitem) {
-
             if (!$cartitem instanceof Collection) {
                 $cartitem = collect($cartitem);
             }
@@ -476,9 +461,7 @@ class Order extends BaseModel
             $product = $cartitem['product'];
             $pricing = $product->getPrice();
             $line_price = $pricing->price;
-
             $line_price = $line_price * $cartitem->get('quantity', 1);
-
             $line_subtotal = 0;
             $line_subtotal_tax = 0;
             /**
@@ -555,7 +538,6 @@ class Order extends BaseModel
             $this->subtotal += $line_subtotal + $line_subtotal_tax;
             $this->subtotal_ex_tax += $line_subtotal;
         }
-
         // Order cart items by price so coupon logic is 'fair' for customers and not based on order added to cart.
         uasort($cartitems, array($this, 'sort_by_subtotal'));
         /**
@@ -564,7 +546,6 @@ class Order extends BaseModel
         foreach ($cartitems as $cart_item_key => $cartitem) {
             $product = $cartitem['product'];
             $pricing = $product->getPrice();
-
             $base_price = $pricing->price;
             $line_price = $pricing->price * $cartitem->get('quantity');
             // Tax data
@@ -610,7 +591,6 @@ class Order extends BaseModel
                     /**
                      * Regular tax calculation (customer inside base and the tax class is unmodified.
                      */
-
                 } else {
                     // Work out a new base price without the item tax
                     $taxes = $taxModel->calculateTax($line_price, $item_tax_rates, true);
@@ -641,11 +621,9 @@ class Order extends BaseModel
                 // Now calc product rates
                 $discounted_price = $this->getDiscountedPrice($cartitem, $base_price, true);
                 $discounted_taxes = $taxModel->calculateTax($discounted_price * $cartitem->get('quantity'), $item_tax_rates);
-
                 $discounted_tax_amount = $taxModel->getTaxTotal($discounted_taxes);
                 $line_tax = $discounted_tax_amount;
                 $line_total = $discounted_price * $cartitem->get('quantity');
-
                 // Tax rows - merge the totals we just got
                 foreach (array_keys($this->taxes + $discounted_taxes) as $key) {
                     $this->taxes[$key]['amount'] = (isset($discounted_taxes[$key]) ? $discounted_taxes[$key]['amount'] : 0) + (isset($this->taxes[$key]) ? $this->taxes[$key]['amount'] : 0);
@@ -655,12 +633,10 @@ class Order extends BaseModel
             // Cart contents total is based on discounted prices and is used for the final total calculation
             $this->cart_contents_total += $line_total;
             // Store costs + taxes for lines
-
             $this->cart_contents[$cart_item_key]['line_total'] = $line_total;
             $this->cart_contents[$cart_item_key]['line_tax'] = $line_tax;
             $this->cart_contents[$cart_item_key]['line_subtotal'] = $line_subtotal;
             $this->cart_contents[$cart_item_key]['line_subtotal_tax'] = $line_subtotal_tax;
-
             // Store rates ID and costs - Since 2.2
             $this->cart_contents[$cart_item_key]['line_tax_data'] = array('total' => $discounted_taxes, 'subtotal' => $taxes);
         }
@@ -686,10 +662,8 @@ class Order extends BaseModel
             }
             // Allow plugins to hook and alter totals before final total is calculated
             do_action('storepress_calculate_totals', $this);
-
             // Grand Total - Discounted product prices, discounted tax, shipping cost + tax
             $this->total = max(0, apply_filters('storepress_calculated_total', round($this->cart_contents_total + $this->tax_total + $this->shipping_tax_total + $this->shipping_total + $this->fee_total, $this->dp), $this));
-
         } else {
             // Set tax total to sum of all tax rows
             $this->tax_total = $taxModel->getTaxTotal($this->taxes);
@@ -699,7 +673,6 @@ class Order extends BaseModel
             }
         }
         do_action('storepress_after_calculate_totals', $this);
-
         $this->setSession();
         return $this;
     }
@@ -800,7 +773,6 @@ class Order extends BaseModel
     public function getCart()
     {
         //  $this->cart_contents = Cart::getItems(true, true);
-
         if (!did_action('sp_cart_loaded_from_session')) {
             $this->getCartFromSession();
         }
@@ -830,7 +802,6 @@ class Order extends BaseModel
          * processing.
          */
         $cart_items = Cart::getItems(true);
-
         foreach ($cart_items as $key => $cartitem) {
             if (!$cartitem instanceof Collection) {
                 $cartitem = collect($cartitem);
@@ -849,10 +820,8 @@ class Order extends BaseModel
                 }
             }
         }
-
         // Trigger action
         do_action('sp_cart_loaded_from_session', $this);
-
         if ((!$this->subtotal) && (!$this->isEmpty())) {
             $this->calculateTotals();
         }
@@ -883,7 +852,6 @@ class Order extends BaseModel
     {
         //if the product is already loaded, return it.
         if (isset($cartitem['product']) && $cartitem['product'] instanceof ProductInterface) return $cartitem['product'];
-
         $product = Product::init($cartitem->get('product_id', 0));
         if (isset($product->ID) && $product->ID) return $product;
         return new ProductBase();
@@ -948,9 +916,7 @@ class Order extends BaseModel
             $this->shipping_info['isEnable'] = false;
             return false;
         }
-
         $this->shipping_info['shipping_dont_allow_if_no_shipping'] = Settings::get('shipping_dont_allow_if_no_shipping', 'off');
-
         $needs_shipping = false;
         if ($this->cart_contents) {
             foreach ($this->cart_contents as $cart_item_key => $cartitem) {
@@ -961,7 +927,6 @@ class Order extends BaseModel
             }
         }
         $this->shipping_info['needShipping'] = $needs_shipping;
-
         return apply_filters('storepress_cart_needs_shipping', $needs_shipping);
     }
 
@@ -987,7 +952,6 @@ class Order extends BaseModel
     public function show_shipping()
     {
         if (Settings::get('shipping_enable') == 'off' || empty($this->cart_contents)) return false;
-
         if ('yes' === Settings::get('cartconfig_is_shipping_address_required')) {
             $customer = new Customer();
             if (!$customer->has_calculated_shipping()) {
@@ -1026,9 +990,8 @@ class Order extends BaseModel
         $packages[0]['destination']['state'] = $customer->get_shipping_state();
         $packages[0]['destination']['postcode'] = $customer->get_shipping_postcode();
         $packages[0]['destination']['city'] = $customer->get_shipping_city();
-        $packages[0]['destination']['address'] = $customer->get_shipping_address();
+        $packages[0]['destination']['address'] = $customer->getShippingAddress();
         $packages[0]['destination']['address_2'] = $customer->get_shipping_address_2();
-
         foreach ($this->cart_contents as $item) {
             //TODO: Simplify this
             if ($item['product']->requiresShipping()) {
@@ -1039,16 +1002,12 @@ class Order extends BaseModel
         }
         return apply_filters('storepress_cart_shipping_packages', $packages);
     }
-
-
     /**
      * TOTALS
      */
-
     /**
      * Product functions
      */
-
     /**
      * Get the line item price
      *
@@ -1057,15 +1016,13 @@ class Order extends BaseModel
      */
     public function getLineItemPrice(ProductInterface $product)
     {
-        if ($this->tax_display_cart == 'excl') {
+        if ($this->tax_display_cart == 'excludeTax') {
             $product_price = $product->get_price_excluding_tax();
         } else {
             $product_price = $product->get_price_including_tax();
         }
-
         return apply_filters('sp_cart_product_price', $product_price, $product);
     }
-
 
     /**
      * Get the line item subtotal.
@@ -1080,48 +1037,33 @@ class Order extends BaseModel
      */
     public function getLineItemSubtotal(ProductInterface $product, $quantity)
     {
-
         $pricing = $product->getPrice();
         $price = $pricing->price;
-
         // Taxable
         if ($product->isTaxable()) {
-
-            if ($this->tax_display_cart == 'excl') {
-
+            if ($this->tax_display_cart == 'excludeTax') {
                 $row_price = $product->get_price_excluding_tax($quantity);
                 $product_subtotal = $row_price;
-
                 if ($this->prices_include_tax && $this->tax_total > 0) {
                     $product_subtotal .= ' <small class="tax_label">(ex. Tax)</small>';
                 }
-
             } else {
-
                 $row_price = $product->get_price_including_tax($quantity);
                 $product_subtotal = $row_price;
-
                 if (!$this->prices_include_tax && $this->tax_total > 0) {
                     $product_subtotal .= ' <small class="tax_label">(incl. Tax)</small>';
                 }
-
             }
-
             // Non-taxable
         } else {
-
             $row_price = $price * $quantity;
             $product_subtotal = $row_price;
         }
-
         return apply_filters('sp_cart_product_subtotal', $product_subtotal, $product, $quantity, $this);
     }
-
-
     /**
      * Tax functions
      */
-
     /**
      * Returns the cart and shipping taxes, merged.
      *
@@ -1134,7 +1076,6 @@ class Order extends BaseModel
         foreach (array_keys($this->taxes + $this->shipping_taxes) as $key) {
             $taxes[$key] = (isset($this->shipping_taxes[$key]['rate']) ? $this->shipping_taxes[$key] : $this->taxes[$key]);
         }
-
         return apply_filters('sp_cart_get_taxes', $taxes, $this);
     }
 
@@ -1146,9 +1087,8 @@ class Order extends BaseModel
     public function getItemisedTaxTotals()
     {
         $taxes = $this->getTaxes();
-
         $tax_totals = array();
-
+        $currency = new Currency();
         foreach ($taxes as $key => $tax) {
             if (isset($tax['rate']) && $tax['rate'] instanceof TaxRateAmount) {
                 $rate = $tax['rate'];
@@ -1159,17 +1099,15 @@ class Order extends BaseModel
                 $tax_totals[$tax_rate_id]->is_compound = $taxType->isCompound();
                 $tax_totals[$tax_rate_id]->label = $taxType->getName();
                 $tax_totals[$tax_rate_id]->amount += $tax['amount'];
-                $tax_totals[$tax_rate_id]->formatted_amount = $tax_totals[$tax_rate_id]->amount;
+                $tax_totals[$tax_rate_id]->formatted_amount = $currency->format($tax_totals[$tax_rate_id]->amount);
             }
         }
-
         return apply_filters('sp_cart_tax_totals', $tax_totals, $this);
     }
 
     public function getTaxesTotal($compound = true)
     {
         $total = 0;
-
         $taxes = $this->getItemisedTaxTotals();
         foreach ($taxes as $key => $tax) {
             if (!$compound && $tax->is_compound) continue;
@@ -1180,23 +1118,20 @@ class Order extends BaseModel
 
     public function getSingleTaxRate($tax)
     {
-
         if (!isset($tax['rate']) || !$tax['rate'] instanceof TaxRateAmount) {
             $tax_rate_id = 0;
             $tax_totals[$tax_rate_id] = new \stdClass();
             $tax_totals[$tax_rate_id]->amount = 0;
         }
-
         $rate = $tax['rate'];
         $taxType = $rate->getRate()->getType();
         $tax_rate_id = $rate->getId();
-
         $single_rate = new \stdClass();
         $single_rate->tax_rate_id = $rate->getId();
         $single_rate->is_compound = $taxType->isCompound();
         $single_rate->label = $taxType->getName();
         $single_rate->amount += $tax['amount'];
-        $single_rate->formatted_amount = $single_rate->amount;
+        $single_rate->formatted_amount = (new Currency())->format($single_rate->amount);
         return $single_rate;
     }
 
@@ -1205,11 +1140,9 @@ class Order extends BaseModel
         $cart_total_tax = $this->tax_total + $this->shipping_tax_total;
         return apply_filters('sp_get_cart_tax', $cart_total_tax ? $cart_total_tax : '');
     }
-
     /**
      * Cart, shipping, order
      */
-
     /**
      * Gets the order total (after calculation).
      *
@@ -1246,7 +1179,6 @@ class Order extends BaseModel
         } else {
             $cart_contents_total = $this->cart_contents_total + $this->tax_total;
         }
-
         return apply_filters('sp_cart_contents_total', $cart_contents_total);
     }
 
@@ -1258,37 +1190,27 @@ class Order extends BaseModel
      */
     public function getCartSubtotal($compound = false)
     {
-
         // If the cart has compound tax, we want to show the subtotal as
         // cart + shipping + non-compound taxes (after discount)
         if ($compound) {
-
             $cart_subtotal = $this->cart_contents_total + $this->shipping_total + $this->getTaxesTotal(false);
-
             // Otherwise we show cart items totals only (before discount)
         } else {
-
             // Display varies depending on settings
-            if ($this->tax_display_cart == 'excl') {
-
+            if ($this->tax_display_cart == 'excludeTax') {
                 $cart_subtotal = (new Currency())->format($this->subtotal_ex_tax);
-
-                if ($this->tax_total > 0 && $this->prices_include_tax) {
+                if ($this->tax_total > 0 && !$this->prices_include_tax) {
                     $cart_subtotal .= ' <small class="tax_label">(ex. Tax)</small>';
                 }
-
             } else {
                 $cart_subtotal = (new Currency())->format($this->subtotal);
-
-                if ($this->tax_total > 0 && !$this->prices_include_tax) {
+                if ($this->tax_total > 0 && $this->prices_include_tax) {
                     $cart_subtotal .= ' <small class="tax_label">(incl. Tax)</small>';
                 }
             }
         }
-
         return apply_filters('sp_cart_subtotal', $cart_subtotal, $compound, $this);
     }
-
 
     /**
      * Gets the shipping total (after calculation).
@@ -1299,37 +1221,48 @@ class Order extends BaseModel
     {
         if (isset($this->shipping_total)) {
             if ($this->shipping_total > 0) {
-
                 // Display varies depending on settings
-                if ($this->tax_display_cart == 'excl') {
-
+                if ($this->tax_display_cart == 'excludeTax') {
                     $return = $this->shipping_total;
-
                     if ($this->shipping_tax_total > 0 && $this->prices_include_tax) {
                         $return .= ' <small class="tax_label">(ex. Tax)</small>';
                     }
-
                     return $return;
-
                 } else {
-
                     $return = $this->shipping_total + $this->shipping_tax_total;
-
                     if ($this->shipping_tax_total > 0 && !$this->prices_include_tax) {
                         $return .= ' <small class="tax_label">(incl. Tax)</small>';
                     }
-
                     return $return;
-
                 }
-
             } else {
                 return __('Free!', 'Storepress');
             }
         }
-
         return '';
     }
 
-
+    public function getCartOrderTotal()
+    {
+        $value = '<strong>' . (new Currency())->format($this->getTotal()) . '</strong> ';
+        // If prices are tax inclusive, show taxes here
+        if (Settings::isTaxEnabled() && $this->tax_display_cart == 'includeTax') {
+            $tax_string_array = array();
+            if (Settings::get('tax_display_tax_total') == 'itemized') {
+                foreach ($this->getItemisedTaxTotals() as $code => $tax)
+                    $tax_string_array[] = sprintf('%s %s', $tax->formatted_amount, $tax->label);
+            } else {
+                $tax_string_array[] = sprintf('%s %s', $this->getTaxesTotal(true), Settings::taxOrVat());
+            }
+            if (!empty($tax_string_array)) {
+                $customer = new Customer();
+                $taxable_address = $customer->get_taxable_address();
+                $estimated_text = $customer->is_customer_outside_base() && !$customer->has_calculated_shipping()
+                    ? sprintf(' ' . __('estimated for %s', 'storepress'), $taxable_address[0])
+                    : '';
+                $value .= '<small class="includes_tax">' . sprintf(__('(includes %s)', 'storepress'), implode(', ', $tax_string_array) . $estimated_text) . '</small>';
+            }
+        }
+        return apply_filters('sp_cart_totals_order_total_html', $value);
+    }
 }
