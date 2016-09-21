@@ -9,24 +9,17 @@
  */
 namespace Flycartinc\Order\Model;
 
-use CommerceGuys\Addressing\Model\Address;
-use CommerceGuys\Addressing\Repository\CountryRepository;
 use CommerceGuys\Tax\Model\TaxRateAmount;
 use Herbert\Framework\Notifier;
 use Illuminate\Support\Collection;
 use Flycartinc\Cart\Cart;
 use StorePress\Helper\Currency;
 use StorePress\Models\Customer;
-use StorePress\Models\Fee;
-use StorePress\Models\Fees;
 use StorePress\Models\OrderMeta;
-use StorePress\Models\Product;
-use StorePress\Models\ProductBase;
 use StorePress\Models\ProductInterface;
 use StorePress\Models\Settings;
 use StorePress\Models\Shipping;
 use StorePress\Models\Tax;
-use Symfony\Component\VarDumper\Caster\CutArrayStub;
 
 /**
  * Class Order
