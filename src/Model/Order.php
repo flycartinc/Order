@@ -256,7 +256,7 @@ class Order extends BaseModel
     public function updateOrderStatus($status)
     {
         //TODO: Improve this Process
-        $order = Order::find($this->order_id);
+        $order = Order::where('unique_order_id', $this->order_id)->get()->first();
         $order->order_status = $status;
         $order->save();
 
