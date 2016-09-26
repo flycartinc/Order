@@ -7,7 +7,7 @@
  * that was distribute as a part of the source code
  *
  */
-namespace FlycartInc\Order\Model;
+namespace Flycartinc\Order\Model;
 
 use Corcel\Model as CorcelModel;
 use Corcel\Post;
