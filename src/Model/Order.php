@@ -242,7 +242,12 @@ class Order extends BaseModel
         if ($status == false) {
             $status = 'complete';
         }
-        $this->updateOrderStatus($status);
+        if ($this->order_id) {
+            if ($this->order_status != 'completed') {
+                $this->updateOrderStatus($status);
+                do_action('send_complete_order_mail');
+            }
+        }
     }
 
     public function getMetaAttribute()
@@ -260,6 +265,10 @@ class Order extends BaseModel
         $order->order_status = $status;
         $order->save();
 
+        if ($this->order_id and $status != 'completed') {
+            do_action('send_confirm_order_mail', $status);
+        }
+
 //        $orderMeta = new OrderMeta();
 //        $orderMeta->order_id = $this->order_id;
 //        $orderMeta->meta_key = 'order_status';
@@ -268,6 +277,7 @@ class Order extends BaseModel
 
 
         $this->saveTransaction();
+        self::emptyCart();
     }
 
     public static function emptyCart()
