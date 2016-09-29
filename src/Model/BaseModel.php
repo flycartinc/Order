@@ -1,6 +1,6 @@
 <?php
 /**
- * Order management package for StorePress
+ * Order management package for CartRabbit
  *
  * (c) Ramesh Elamathi <ramesh@flycart.org>
  * For the full copyright and license information, please view the LICENSE file
