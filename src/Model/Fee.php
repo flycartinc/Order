@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Class Fee
- * @package StorePress\Models
+ * @package CartRabbit\Models
  */
 class Fee extends Collection implements TaxableInterface
 {
