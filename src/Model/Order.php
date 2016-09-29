@@ -1,6 +1,6 @@
 <?php
 /**
- * Order management package for StorePress
+ * Order management package for CartRabbit
  *
  * (c) Ramesh Elamathi <ramesh@flycart.org>
  * For the full copyright and license information, please view the LICENSE file
@@ -14,13 +14,13 @@ use CommerceGuys\Tax\Model\TaxRateAmount;
 use Herbert\Framework\Notifier;
 use Illuminate\Support\Collection;
 use Flycartinc\Cart\Cart;
-use StorePress\Helper\Currency;
-use StorePress\Models\Customer;
-use StorePress\Models\OrderMeta;
-use StorePress\Models\ProductInterface;
-use StorePress\Models\Settings;
-use StorePress\Models\Shipping;
-use StorePress\Models\Tax;
+use CartRabbit\Helper\Currency;
+use CartRabbit\Models\Customer;
+use CartRabbit\Models\OrderMeta;
+use CartRabbit\Models\ProductInterface;
+use CartRabbit\Models\Settings;
+use CartRabbit\Models\Shipping;
+use CartRabbit\Models\Tax;
 
 /**
  * Class Order
@@ -33,7 +33,7 @@ class Order extends BaseModel
     /**
      * @var string
      */
-    protected $table = 'storepress_orders';
+    protected $table = 'cartrabbit_orders';
     /**
      * @var string
      */
@@ -459,7 +459,7 @@ class Order extends BaseModel
         //this is where the real calculation takes place.
         $this->reset();
         //TODO: Verify this
-//        do_action('storepress_before_calculate_totals', $this);
+//        do_action('cartrabbit_before_calculate_totals', $this);
         if ($this->isEmpty()) {
             $this->setSession();
         }
@@ -513,11 +513,11 @@ class Order extends BaseModel
                 /**
                  * ADJUST TAX - Calculations when base tax is not equal to the item tax.
                  *
-                 * The storepress_adjust_non_base_location_prices filter can stop base taxes being taken off when dealing with out of base locations.
+                 * The cartrabbit_adjust_non_base_location_prices filter can stop base taxes being taken off when dealing with out of base locations.
                  * e.g. If a product costs 10 including tax, all users will pay 10 regardless of location and taxes.
                  * This feature is experimental @since 2.4.7 and may change in the future. Use at your risk.
                  */
-                if ($item_tax_rates !== $base_tax_rates && apply_filters('storepress_adjust_non_base_location_prices', true)) {
+                if ($item_tax_rates !== $base_tax_rates && apply_filters('cartrabbit_adjust_non_base_location_prices', true)) {
                     // Work out a new base price without the shop's base tax
                     $taxes = $taxModel->calculateTax($line_price, $base_tax_rates, true);
                     // Now we have a new item price (excluding TAX)
@@ -590,7 +590,7 @@ class Order extends BaseModel
                  * e.g. If a product costs 10 including tax, all users will pay 10 regardless of location and taxes.
                  * This feature is experimental @since 2.4.7 and may change in the future. Use at your risk.
                  */
-                if ($item_tax_rates !== $base_tax_rates && apply_filters('storepress_adjust_non_base_location_prices', true)) {
+                if ($item_tax_rates !== $base_tax_rates && apply_filters('cartrabbit_adjust_non_base_location_prices', true)) {
                     // Work out a new base price without the shop's base tax
                     $taxes = $taxModel->calculateTax($line_price, $base_tax_rates, true);
                     // Now we have a new item price (excluding TAX)
@@ -677,10 +677,10 @@ class Order extends BaseModel
                 $this->removeTaxes();
             }
             // Allow plugins to hook and alter totals before final total is calculated
-            do_action('storepress_calculate_totals', $this);
+            do_action('cartrabbit_calculate_totals', $this);
             // Grand Total - Discounted product prices, discounted tax, shipping cost + tax
             $total = $this->cart_contents_total + $this->tax_total + $this->shipping_tax_total + $this->shipping_total + $this->fee_total;
-            $this->total = max(0, apply_filters('storepress_calculated_total', $total, $this));
+            $this->total = max(0, apply_filters('cartrabbit_calculated_total', $total, $this));
         } else {
             // Set tax total to sum of all tax rows
             $this->tax_total = $taxModel->getTaxTotal($this->taxes);
@@ -689,7 +689,7 @@ class Order extends BaseModel
                 $this->removeTaxes();
             }
         }
-        do_action('storepress_after_calculate_totals', $this);
+        do_action('cartrabbit_after_calculate_totals', $this);
         $this->setSession();
         return $this;
     }
@@ -703,7 +703,7 @@ class Order extends BaseModel
         $this->fee_total = 0;
         $this->fees = (new Fee())->getFees();
         // Fire an action where developers can add their fees
-        do_action('storepress_cart_calculate_fees', $this);
+        do_action('cartrabbit_cart_calculate_fees', $this);
         $taxModel = new Tax();
         // If fees were added, total them and calculate tax
         if (!empty($this->fees)) {
@@ -808,7 +808,7 @@ class Order extends BaseModel
                     do_action('sp_remove_cart_item_from_session', $key, $cartitem);
                 } else {
                     $cartitem->put('product', $product);
-                    $this->cart_contents[$key] = apply_filters('storepress_get_cart_item_from_session', $cartitem, $key);
+                    $this->cart_contents[$key] = apply_filters('cartrabbit_get_cart_item_from_session', $cartitem, $key);
                 }
             }
         }
@@ -906,7 +906,7 @@ class Order extends BaseModel
             }
         }
         $this->shipping_info['needShipping'] = $needs_shipping;
-        return apply_filters('storepress_cart_needs_shipping', $needs_shipping);
+        return apply_filters('cartrabbit_cart_needs_shipping', $needs_shipping);
     }
 
     /**
@@ -940,7 +940,7 @@ class Order extends BaseModel
             }
         }
         $show_shipping = true;
-        return apply_filters('storepress_cart_ready_to_calc_shipping', $show_shipping);
+        return apply_filters('cartrabbit_cart_ready_to_calc_shipping', $show_shipping);
     }
 
     /**
@@ -979,7 +979,7 @@ class Order extends BaseModel
                 }
             }
         }
-        return apply_filters('storepress_cart_shipping_packages', $packages);
+        return apply_filters('cartrabbit_cart_shipping_packages', $packages);
     }
     /**
      * TOTALS
@@ -1215,7 +1215,7 @@ class Order extends BaseModel
                     return $return;
                 }
             } else {
-                return __('Free', 'Storepress');
+                return __('Free', 'cartrabbit');
             }
         }
         return '';
@@ -1237,9 +1237,9 @@ class Order extends BaseModel
                 $customer = new Customer();
                 $taxable_address = $customer->get_taxable_address();
                 $estimated_text = $customer->is_customer_outside_base() && !$customer->has_calculated_shipping()
-                    ? sprintf(' ' . __('estimated for %s', 'storepress'), $taxable_address[0])
+                    ? sprintf(' ' . __('estimated for %s', 'cartrabbit'), $taxable_address[0])
                     : '';
-                $value .= '<small class="includes_tax">' . sprintf(__('(includes %s)', 'storepress'), implode(', ', $tax_string_array) . $estimated_text) . '</small>';
+                $value .= '<small class="includes_tax">' . sprintf(__('(includes %s)', 'cartrabbit'), implode(', ', $tax_string_array) . $estimated_text) . '</small>';
             }
         }
         return apply_filters('sp_cart_totals_order_total_html', $value);
