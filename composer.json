@@ -1,6 +1,6 @@
 {
   "name": "flycartinc/order",
-  "description": "Order management for Storepress",
+  "description": "Order management for CartRabbit",
   "keywords": ["shop", "ecommerce", "orders", "cart"],
   "homepage": "http://flycart.org",
   "license": "MIT",
