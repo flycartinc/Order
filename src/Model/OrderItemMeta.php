@@ -4,7 +4,7 @@ namespace Flycartinc\Order\Model;
 
 /**
  * Class order_items
- * @package StorePress\Models
+ * @package CartRabbit\Models
  */
 class OrderItemMeta extends BaseModel
 {
@@ -12,7 +12,7 @@ class OrderItemMeta extends BaseModel
      * To Set Table Name
      * @var string
      */
-    protected $table = 'storepress_order_itemmeta';
+    protected $table = 'cartrabbit_order_itemmeta';
 
     /**
      * To Set Fillable fields in the table
