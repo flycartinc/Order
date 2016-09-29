@@ -1,6 +1,6 @@
 <?php
 /**
- * Order management package for StorePress
+ * Order management package for CartRabbit
  *
  * (c) Ramesh Elamathi <ramesh@flycart.org>
  * For the full copyright and license information, please view the LICENSE file
@@ -11,7 +11,7 @@
 namespace Flycartinc\Order\Model;
 
 use Illuminate\Database\Eloquent\Collection;
-use StorePress\Models\Price;
+use cartRabbit\Models\Price;
 
 /**
  * Class OrderItem
@@ -23,7 +23,7 @@ class OrderItem extends BaseModel implements OrderItemInterface
     /**
      * @var string
      */
-    protected $table = 'storepress_order_items';
+    protected $table = 'cartrabbit_order_items';
 
     /**
      * @var string
