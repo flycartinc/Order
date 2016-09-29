@@ -10,6 +10,7 @@
 namespace Flycartinc\Order\Model;
 
 use Carbon\Carbon;
+use CartRabbit\Helper\Util;
 use CommerceGuys\Tax\Model\TaxRateAmount;
 use Herbert\Framework\Notifier;
 use Illuminate\Support\Collection;
@@ -240,7 +241,7 @@ class Order extends BaseModel
     public function paymentComplete($status = false)
     {
         if ($status == false) {
-            $status = 'complete';
+            $status = 'completed';
         }
         if ($this->order_id) {
             if ($this->order_status != 'completed') {
@@ -258,23 +259,22 @@ class Order extends BaseModel
     /**
      * @param $status
      */
-    public function updateOrderStatus($status)
+    public function updateOrderStatus($status, $is_row_id = false)
     {
+        $order_id = Util::extractDataFromHTTP('order_id');
+
+        $field = 'unique_order_id';
+        if ($is_row_id) {
+            $field = 'id';
+        }
         //TODO: Improve this Process
-        $order = Order::where('unique_order_id', $this->order_id)->get()->first();
+        $order = Order::where($field, $order_id)->get()->first();
         $order->order_status = $status;
         $order->save();
 
         if ($this->order_id and $status != 'completed') {
             do_action('send_confirm_order_mail', $status);
         }
-
-//        $orderMeta = new OrderMeta();
-//        $orderMeta->order_id = $this->order_id;
-//        $orderMeta->meta_key = 'order_status';
-//        $orderMeta->meta_value = $status;
-//        $orderMeta->save();
-
 
         $this->saveTransaction();
         self::emptyCart();
@@ -314,7 +314,9 @@ class Order extends BaseModel
         $order_items = $this->getCart();
 
         foreach ($order_items as $index => &$item) {
-            $item['line_price'] = $this->getLineItemPrice($item['product']);
+            $this->cart_item_quantity += $item['quantity'];
+
+            $item['line_price'] = $this->getLineItemPrice($item['product'], $item['quantity']);
             $item['line_final_total'] = $this->getLineItemSubtotal($item['product'], $item['quantity']);
             $item['product']->processProduct(false);
             $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
@@ -993,12 +995,12 @@ class Order extends BaseModel
      * @param ProductInterface $product
      * @return string formatted price
      */
-    public function getLineItemPrice(ProductInterface $product)
+    public function getLineItemPrice(ProductInterface $product, $quantity)
     {
         if ($this->tax_display_cart == 'excludeTax') {
-            $product_price = $product->get_price_excluding_tax();
+            $product_price = $product->get_price_excluding_tax($quantity, '', true);
         } else {
-            $product_price = $product->get_price_including_tax();
+            $product_price = $product->get_price_including_tax($quantity, '', true);
         }
         return apply_filters('sp_cart_product_price', $product_price, $product);
     }
