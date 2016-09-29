@@ -316,7 +316,7 @@ class Order extends BaseModel
         foreach ($order_items as $index => &$item) {
             $item['line_price'] = $this->getLineItemPrice($item['product']);
             $item['line_final_total'] = $this->getLineItemSubtotal($item['product'], $item['quantity']);
-            // $item['product']->processProduct(false);
+            $item['product']->processProduct(false);
             $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
         }
         /** To Verify the Cart status. */
