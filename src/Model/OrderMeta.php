@@ -3,7 +3,7 @@ namespace FlycartInc\Order\Model;
 
 class OrderMeta extends BaseModel {
 
-	protected $table = 'storepress_ordermeta';
+	protected $table = 'cartrabbit_ordermeta';
 	protected $primaryKey = 'id';
 	public $timestamps = false;
 	protected $fillable = [ 'meta_key', 'meta_value', 'order_id' ];
