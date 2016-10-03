@@ -477,7 +477,7 @@ class Order extends BaseModel
         foreach ($cartitems as $cart_item_key => $cartitem) {
 
             $product = $cartitem->getProduct();
-            $pricing = $product->getPrice();
+            $pricing = $product->getPrice($cartitem->getQuantity());
             $line_price = $pricing->price;
             $line_price = $line_price * $cartitem->getQuantity();
             $line_subtotal = 0;
@@ -563,7 +563,7 @@ class Order extends BaseModel
          */
         foreach ($cartitems as $cart_item_key => $cartitem) {
             $product = $cartitem->getProduct();
-            $pricing = $product->getPrice();
+            $pricing = $product->getPrice($cartitem->getQuantity());
             $base_price = $pricing->price;
             $line_price = $pricing->price * $cartitem->getQuantity();
             // Tax data
