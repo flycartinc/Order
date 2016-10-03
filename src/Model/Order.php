@@ -192,7 +192,7 @@ class Order extends BaseModel
         }
         parent::__construct($attributes);
         $this->prices_include_tax = Settings::pricesIncludeTax();
-        $this->tax_display_cart = Settings::get('tax_display_price_during_cart');
+        $this->tax_display_cart = Settings::get('tax_display_price_during_cart', 'no');
     }
 
     /**
@@ -261,12 +261,14 @@ class Order extends BaseModel
      */
     public function updateOrderStatus($status, $is_row_id = false)
     {
-        $order_id = Util::extractDataFromHTTP('order_id');
-
         $field = 'unique_order_id';
         if ($is_row_id) {
             $field = 'id';
+            $order_id = Util::extractDataFromHTTP('order_id');
+        } else {
+            $order_id = $this->order_id;
         }
+
         //TODO: Improve this Process
         $order = Order::where($field, $order_id)->get()->first();
         $order->order_status = $status;
@@ -893,7 +895,7 @@ class Order extends BaseModel
     public function needs_shipping()
     {
         $this->shipping_info['isEnable'] = true;
-        if (Settings::get('shipping_enable') === 'no') {
+        if (Settings::get('shipping_enable', 'no') === 'no') {
             $this->shipping_info['isEnable'] = false;
             return false;
         }
@@ -932,8 +934,8 @@ class Order extends BaseModel
      */
     public function show_shipping()
     {
-        if (Settings::get('shipping_enable') == 'off' || empty($this->cart_contents)) return false;
-        if ('yes' === Settings::get('cartconfig_is_shipping_address_required')) {
+        if (Settings::get('shipping_enable', 'no') == 'no' || empty($this->cart_contents)) return false;
+        if ('yes' === Settings::get('cartconfig_is_shipping_address_required', 'yes')) {
             $customer = new Customer();
             if (!$customer->has_calculated_shipping()) {
                 if (!$customer->get_shipping_country() && !$customer->get_shipping_state() && !$customer->get_shipping_postcode()) {
@@ -1229,7 +1231,7 @@ class Order extends BaseModel
         // If prices are tax inclusive, show taxes here
         if (Settings::isTaxEnabled() && $this->tax_display_cart == 'includeTax') {
             $tax_string_array = array();
-            if (Settings::get('tax_display_tax_total') == 'itemized') {
+            if (Settings::get('tax_display_tax_total', 'itemized') == 'itemized') {
                 foreach ($this->getItemisedTaxTotals() as $code => $tax)
                     $tax_string_array[] = sprintf('%s %s', $tax->formatted_amount, $tax->label);
             } else {
