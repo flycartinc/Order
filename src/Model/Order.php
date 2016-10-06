@@ -78,6 +78,11 @@ class Order extends BaseModel
     public $taxes = array();
     /** @var array An array of taxes/tax rates for the shipping. */
     public $shipping_taxes = array();
+
+    /**
+     * @var array
+     */
+    public $shipping_rates = array();
     /** @var array Holding the Shipping Info. */
     public $shipping_info = array();
     /** @var float Discount amount before tax */
@@ -251,6 +256,9 @@ class Order extends BaseModel
         }
     }
 
+    /**
+     * @return object
+     */
     public function getMetaAttribute()
     {
         return (object)$this->meta()->pluck('meta_value', 'meta_key')->toArray();
@@ -282,6 +290,9 @@ class Order extends BaseModel
         self::emptyCart();
     }
 
+    /**
+     *
+     */
     public static function emptyCart()
     {
         /** For Clear Cart */
@@ -336,6 +347,9 @@ class Order extends BaseModel
         return true;
     }
 
+    /**
+     *
+     */
     public function validateCart()
     {
         if (is_array($this->cart_contents)) {
@@ -660,6 +674,7 @@ class Order extends BaseModel
             // Store rates ID and costs - Since 2.2
             $this->cart_contents[$cart_item_key]['line_tax_data'] = array('total' => $discounted_taxes, 'subtotal' => $taxes);
         }
+
         // Only calculate the grand total + shipping if on the cart/checkout
         if (Settings::isCheckoutPage() || Settings::isCartPage()) {
             // Calculate the Shipping
@@ -853,7 +868,7 @@ class Order extends BaseModel
         if ($first_item_subtotal === $second_item_subtotal) {
             return 0;
         }
-        return ($first_item_subtotal < $second_item_subtotal) ? 1 : - 1;
+        return ($first_item_subtotal < $second_item_subtotal) ? 1 : -1;
     }
 
     /**
@@ -877,14 +892,17 @@ class Order extends BaseModel
     public function calculateShipping()
     {
         $shipping = new Shipping();
+
         if ($this->needs_shipping() && $this->show_shipping()) {
             $shipping->calculateShipping($this->get_shipping_packages());
         } else {
             $shipping->resetShipping();
         }
+
         // Get totals for the chosen shipping method
         $this->shipping_total = $shipping->shipping_total;    // Shipping Total
         $this->shipping_taxes = $shipping->shipping_taxes;    // Shipping Taxes
+        $this->shipping_rates = $shipping->shipping_rates; // Shipping Methods with its Totals
     }
 
     /**
@@ -1088,6 +1106,10 @@ class Order extends BaseModel
         return apply_filters('sp_cart_tax_totals', $tax_totals, $this);
     }
 
+    /**
+     * @param bool $compound
+     * @return mixed
+     */
     public function getTaxesTotal($compound = true)
     {
         $total = 0;
@@ -1099,6 +1121,10 @@ class Order extends BaseModel
         return apply_filters('sp_cart_taxes_total', $total, $compound, $this);
     }
 
+    /**
+     * @param $tax
+     * @return \stdClass
+     */
     public function getSingleTaxRate($tax)
     {
         if (!isset($tax['rate']) || !$tax['rate'] instanceof TaxRateAmount) {
@@ -1118,6 +1144,9 @@ class Order extends BaseModel
         return $single_rate;
     }
 
+    /**
+     * @return mixed
+     */
     public function getCartTaxTotal()
     {
         $cart_total_tax = $this->tax_total + $this->shipping_tax_total;
@@ -1225,6 +1254,9 @@ class Order extends BaseModel
         return '';
     }
 
+    /**
+     * @return mixed
+     */
     public function getCartOrderTotal()
     {
         $value = '<strong>' . (new Currency())->format($this->getTotal()) . '</strong> ';

@@ -48,5 +48,4 @@ class OrderItemMeta extends BaseModel
     }
 
 
-
 }

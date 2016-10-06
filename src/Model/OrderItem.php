@@ -106,7 +106,7 @@ class OrderItem extends BaseModel implements OrderItemInterface
      */
     public function setItem($item)
     {
-        $this->item = (object) $item;
+        $this->item = (object)$item;
     }
 
     /**
@@ -136,6 +136,11 @@ class OrderItem extends BaseModel implements OrderItemInterface
     public function setQuantity($quantity)
     {
         $this->orderitem_quantity = $quantity;
+    }
+
+    public function getMetaAttribute()
+    {
+        return (object)$this->meta()->pluck('meta_value', 'meta_key')->toArray();
     }
 
     /**
@@ -188,7 +193,8 @@ class OrderItem extends BaseModel implements OrderItemInterface
         return $this->item->org_price;
     }
 
-    public function getTaxProfile(){
+    public function getTaxProfile()
+    {
 
         return $this->taxprofile_id;
     }
@@ -201,8 +207,8 @@ class OrderItem extends BaseModel implements OrderItemInterface
         return $this->getBasePrice() * $this->getQuantity();
     }
 
-    public function prepareItem($cartitem) {
-
+    public function prepareItem($cartitem)
+    {
 
 
     }
