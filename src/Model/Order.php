@@ -822,15 +822,18 @@ class Order extends BaseModel
 
             //let us find the product
             $product = $cartitem->getProduct();
-            //does the product exists
-            if ($product->getId() && $product->exists() && $cartitem->getQuantity() > 0) {
-                if (!$product->isPurchasable()) {
-                    //product is unavailable. Set a flag indicating that the cart session has to be updated.
-                    $update_cart_session = true;
-                    do_action('sp_remove_cart_item_from_session', $key, $cartitem);
-                } else {
-                    $cartitem->put('product', $product);
-                    $this->cart_contents[$key] = apply_filters('cartrabbit_get_cart_item_from_session', $cartitem, $key);
+
+            if ($product && !is_null($product)) {
+                //does the product exists
+                if ($product->getId() && $product->exists() && $cartitem->getQuantity() > 0) {
+                    if (!$product->isPurchasable()) {
+                        //product is unavailable. Set a flag indicating that the cart session has to be updated.
+                        $update_cart_session = true;
+                        do_action('sp_remove_cart_item_from_session', $key, $cartitem);
+                    } else {
+                        $cartitem->put('product', $product);
+                        $this->cart_contents[$key] = apply_filters('cartrabbit_get_cart_item_from_session', $cartitem, $key);
+                    }
                 }
             }
         }
