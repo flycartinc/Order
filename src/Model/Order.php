@@ -10,6 +10,7 @@
 namespace Flycartinc\Order\Model;
 
 use Carbon\Carbon;
+use CartRabbit\Helper\SPCache;
 use CartRabbit\Helper\Util;
 use CommerceGuys\Tax\Model\TaxRateAmount;
 use Herbert\Framework\Notifier;
@@ -276,6 +277,9 @@ class Order extends BaseModel
         } else {
             $order_id = $this->order_id;
         }
+        /** Clearing Cache */
+        SPCache::forget('order_single_' . $this->order_id);
+        SPCache::forget('order_list');
 
         //TODO: Improve this Process
         $order = Order::where($field, $order_id)->get()->first();
@@ -325,7 +329,6 @@ class Order extends BaseModel
     public function initOrder()
     {
         $order_items = $this->getCart();
-
         foreach ($order_items as $index => &$item) {
             $this->cart_item_quantity += $item['quantity'];
 
@@ -831,6 +834,7 @@ class Order extends BaseModel
                 }
             }
         }
+
         // Trigger action
         do_action('sp_cart_loaded_from_session', $this);
         if ((!$this->subtotal) && (!$this->isEmpty())) {
